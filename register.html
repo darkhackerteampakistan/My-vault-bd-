@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>রেজিস্ট্রেশন — MyVault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="auth-left">
+    <div class="auth-brand">
+      <div class="auth-brand-mark">V</div>
+      <div class="auth-brand-info">
+        <div class="bn">MyVault</div>
+        <div class="bs">ড্যাশবোর্ড সিস্টেম</div>
+      </div>
+    </div>
+
+    <div class="auth-hero">
+      <h1>আপনার নিজের<br><em>ড্যাশবোর্ড</em>।</h1>
+      <p>আপনার লিংক শেয়ার করুন। যে কেউ ফর্ম পূরণ করলে সব ডাটা সরাসরি এখানে আসবে।</p>
+    </div>
+
+    <div class="auth-features">
+      <div class="auth-feature">নিজের লিংক তৈরি করুন</div>
+      <div class="auth-feature">সব ডাটা এক জায়গায়</div>
+      <div class="auth-feature">ছবি, GPS, ডিভাইস ইনফো</div>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-card">
+      <div class="head">
+        <h2>অ্যাকাউন্ট খুলুন</h2>
+        <p>আগে থেকে আছে? <a href="login.html">লগইন করুন</a></p>
+      </div>
+
+      <form id="registerForm" novalidate>
+        <div class="field">
+          <label>সম্পূর্ণ নাম</label>
+          <input type="text" id="fullName" placeholder="আপনার নাম" autocomplete="name">
+        </div>
+        <div class="field">
+          <label>ইমেইল</label>
+          <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>পাসওয়ার্ড</label>
+          <input type="password" id="password" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn-primary" id="btnRegister">অ্যাকাউন্ট খুলুন</button>
+        <div class="status" id="formStatus"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db, createUserWithEmailAndPassword, updateProfile,
+         doc, setDoc, serverTimestamp } from "./firebase.js";
+
+const form     = document.getElementById("registerForm");
+const fullName = document.getElementById("fullName");
+const email    = document.getElementById("email");
+const password = document.getElementById("password");
+const btn      = document.getElementById("btnRegister");
+const status   = document.getElementById("formStatus");
+
+function show(t,m){ status.className = "status show " + t; status.textContent = m; }
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  if (!fullName.value.trim()) return show("err","নাম দিন।");
+  if (!email.value.includes("@")) return show("err","সঠিক ইমেইল দিন।");
+  if (password.value.length < 6) return show("err","পাসওয়ার্ড কমপক্ষে ৬ ডিজিট।");
+
+  btn.disabled = true;
+  btn.textContent = "তৈরি হচ্ছে…";
+  show("info","অ্যাকাউন্ট তৈরি হচ্ছে…");
+
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email.value.trim(), password.value);
+    await updateProfile(cred.user, { displayName: fullName.value.trim() });
+
+    await setDoc(doc(db, "users", cred.user.uid), {
+      uid: cred.user.uid,
+      fullName: fullName.value.trim(),
+      email: email.value.trim(),
+      createdAt: serverTimestamp(),
+      totalCaptures: 0,
+      role: "user"
+    });
+
+    show("ok","✓ সফল! ড্যাশবোর্ডে নেওয়া হচ্ছে…");
+    setTimeout(() => location.href = "dashboard.html", 1000);
+  } catch (err) {
+    console.error(err);
+    let msg = "সমস্যা হয়েছে।";
+    if (err.code === "auth/email-already-in-use") msg = "এই ইমেইল আগেই আছে।";
+    else if (err.code === "auth/weak-password") msg = "পাসওয়ার্ড দুর্বল।";
+    show("err", msg);
+    btn.disabled = false;
+    btn.textContent = "অ্যাকাউন্ট খুলুন";
+  }
+});
+</script>
+
+</body>
+</html>
