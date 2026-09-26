@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>আমার লিংক — MyVault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="dash-nav">
+  <div class="dash-brand">
+    <div class="dash-brand-mark">V</div>
+    <div class="dash-brand-info">
+      <div class="bn">MyVault</div>
+      <div class="bs">আমার লিংক</div>
+    </div>
+  </div>
+  <div class="dash-nav-right">
+    <a href="dashboard.html" class="btn-logout" style="text-decoration:none;">← ড্যাশবোর্ড</a>
+  </div>
+</nav>
+
+<div class="dash-wrap">
+
+  <div class="dash-hero">
+    <h1>আপনার ইউনিক লিংক 🔗</h1>
+    <p>এই লিংক শেয়ার করুন। যে কেউ ভিজিট করলে সব ডাটা আপনার ড্যাশবোর্ডে জমা হবে।</p>
+  </div>
+
+  <div class="dash-section">
+    <div class="section-head">
+      <h3>মেইন লিংক</h3>
+    </div>
+    <div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:20px;font-family:var(--mono);font-size:13px;word-break:break-all;line-height:1.6;" id="mainLink">লোড হচ্ছে…</div>
+    <button class="btn-primary" style="margin-top:16px;" id="btnCopyMain">📋 কপি করুন</button>
+  </div>
+
+  <div class="dash-section">
+    <div class="section-head">
+      <h3>QR কোড</h3>
+    </div>
+    <div style="text-align:center;padding:20px;">
+      <div id="qrBox" style="display:inline-block;padding:16px;background:#fff;border:1px solid var(--line);border-radius:14px;"></div>
+      <p style="margin-top:16px;font-size:13px;color:var(--muted);">QR স্ক্যান করলেই লিংক খুলবে</p>
+    </div>
+  </div>
+
+  <div class="dash-section">
+    <div class="section-head">
+      <h3>শেয়ার করার টিপস</h3>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;font-size:14.5px;color:var(--ink-2);line-height:1.7;">
+      <div>💬 <b>WhatsApp / Telegram:</b> সরাসরি লিংক পেস্ট করুন</div>
+      <div>📱 <b>SMS:</b> ছোট করে লিংক পাঠান</div>
+      <div>📷 <b>Instagram Bio:</b> লিংক যোগ করুন</div>
+      <div>🌐 <b>Facebook:</b> পোস্ট বা message-এ দিন</div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { auth, onAuthStateChanged } from "./firebase.js";
+import QRCode from "https://cdn.skypack.dev/qrcode";
+
+const mainLink    = document.getElementById("mainLink");
+const btnCopyMain = document.getElementById("btnCopyMain");
+const qrBox       = document.getElementById("qrBox");
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return location.href = "login.html";
+
+  const base = location.origin + location.pathname.replace("links.html", "form.html");
+  const link = base + "?id=" + user.uid;
+
+  mainLink.textContent = link;
+  mainLink.dataset.link = link;
+
+  /* Generate QR */
+  try {
+    const dataUrl = await QRCode.toDataURL(link, {
+      width: 240, margin: 1, color: { dark: "#0d1420", light: "#ffffff" }
+    });
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.style.width = "220px";
+    img.style.height = "220px";
+    img.style.display = "block";
+    qrBox.innerHTML = "";
+    qrBox.appendChild(img);
+  } catch(e){ console.warn(e); }
+});
+
+btnCopyMain.addEventListener("click", () => {
+  const link = mainLink.dataset.link;
+  navigator.clipboard.writeText(link).then(() => {
+    btnCopyMain.textContent = "✓ কপি হয়েছে";
+    setTimeout(() => btnCopyMain.textContent = "📋 কপি করুন", 1500);
+  });
+});
+</script>
+
+</body>
+</html>
