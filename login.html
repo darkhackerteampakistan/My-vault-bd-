@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>লগইন — MyVault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="auth-left">
+    <div class="auth-brand">
+      <div class="auth-brand-mark">V</div>
+      <div class="auth-brand-info">
+        <div class="bn">MyVault</div>
+        <div class="bs">ড্যাশবোর্ড সিস্টেম</div>
+      </div>
+    </div>
+    <div class="auth-hero">
+      <h1>স্বাগতম<br><em>ফিরে আসার জন্য।</em></h1>
+      <p>আপনার সব ডাটা এখন হাতের মুঠোয়।</p>
+    </div>
+    <div class="auth-features">
+      <div class="auth-feature">নিরাপদ লগইন</div>
+      <div class="auth-feature">সব ডিভাইসে সিঙ্ক</div>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-card">
+      <div class="head">
+        <h2>লগইন করুন</h2>
+        <p>নতুন? <a href="register.html">অ্যাকাউন্ট খুলুন</a></p>
+      </div>
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label>ইমেইল</label>
+          <input type="email" id="email" placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label>পাসওয়ার্ড</label>
+          <input type="password" id="password" placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn-primary" id="btnLogin">লগইন</button>
+        <div class="status" id="formStatus"></div>
+      </form>
+      <div class="auth-foot">
+        <a href="#" id="forgot">পাসওয়ার্ড ভুলে গেছেন?</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { auth, signInWithEmailAndPassword, sendPasswordResetEmail } from "./firebase.js";
+
+const form     = document.getElementById("loginForm");
+const email    = document.getElementById("email");
+const password = document.getElementById("password");
+const btn      = document.getElementById("btnLogin");
+const status   = document.getElementById("formStatus");
+const forgot   = document.getElementById("forgot");
+
+function show(t,m){ status.className = "status show " + t; status.textContent = m; }
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!email.value.includes("@")) return show("err","সঠিক ইমেইল দিন।");
+  if (!password.value) return show("err","পাসওয়ার্ড দিন।");
+
+  btn.disabled = true;
+  btn.textContent = "লগইন হচ্ছে…";
+
+  try {
+    await signInWithEmailAndPassword(auth, email.value.trim(), password.value);
+    show("ok","✓ সফল!");
+    setTimeout(() => location.href = "dashboard.html", 600);
+  } catch (err) {
+    console.error(err);
+    let msg = "লগইন ব্যর্থ।";
+    if (err.code === "auth/user-not-found") msg = "এই ইমেইলে অ্যাকাউন্ট নেই।";
+    else if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential")
+      msg = "পাসওয়ার্ড ভুল।";
+    show("err", msg);
+    btn.disabled = false;
+    btn.textContent = "লগইন";
+  }
+});
+
+forgot.addEventListener("click", async (e) => {
+  e.preventDefault();
+  if (!email.value.includes("@")) return show("err","প্রথমে ইমেইল লিখুন।");
+  try {
+    await sendPasswordResetEmail(auth, email.value.trim());
+    show("ok","✓ ইমেইলে রিসেট লিংক পাঠানো হয়েছে।");
+  } catch (err) { show("err","পাঠানো যায়নি।"); }
+});
+</script>
+
+</body>
+</html>
