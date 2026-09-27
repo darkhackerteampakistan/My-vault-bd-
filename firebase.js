@@ -1,6 +1,6 @@
 /* ============================================================
-   MyVault BD — Firebase Configuration
-   ▸ আপনার নিজের প্রজেক্ট কনফিগ সহ
+   MyVault BD — Firebase (Storage ছাড়া)
+   ▸ ছবি যাবে Cloudinary-তে
    ============================================================ */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -13,11 +13,7 @@ import {
   collection, addDoc, query, where, orderBy,
   getDocs, serverTimestamp, onSnapshot, deleteDoc, increment
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import {
-  getStorage, ref, uploadBytes, getDownloadURL, deleteObject
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-/* ⚠️ আপনার Firebase config */
 const firebaseConfig = {
   apiKey: "AIzaSyAkaa2vXfw1R_2dO9y9makyb1ejHNWCaVM",
   authDomain: "my-vault-bd.firebaseapp.com",
@@ -28,17 +24,15 @@ const firebaseConfig = {
   measurementId: "G-CB5FVP9YGD"
 };
 
-const app     = initializeApp(firebaseConfig);
-const auth    = getAuth(app);
-const db      = getFirestore(app);
-const storage = getStorage(app);
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
 
 export {
-  app, auth, db, storage,
+  app, auth, db,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut, onAuthStateChanged, sendPasswordResetEmail, updateProfile,
   doc, setDoc, getDoc, updateDoc, collection, addDoc,
   query, where, orderBy, getDocs, serverTimestamp,
-  onSnapshot, deleteDoc, increment,
-  ref, uploadBytes, getDownloadURL, deleteObject
+  onSnapshot, deleteDoc, increment
 };
